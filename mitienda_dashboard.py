@@ -2154,6 +2154,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .db-detail{font-size:11px;color:#b5c9d9;margin:14px 0 0}.db-detail code{color:#e4eef5}.db-detail a{color:#aed7fa;text-decoration:underline;text-underline-offset:3px}
 .method-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.method-grid p{margin:12px 0}.method-meta{border-top:1px solid #e6eaf0;padding-top:12px;margin-top:10px;color:#637487;font-size:11px}
 .card p:empty{display:none}.card .sb-slot{margin-top:12px}
+.chart-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:25px}.seaborn-badge{background:#e9f1fa;border-color:#cfdeed;color:#385d83;font-size:9px;letter-spacing:.08em}
 @media(max-width:670px){.wrap{padding:0 18px}.hero{padding:38px 0}.card{padding:18px;border-radius:18px}.chart.sb-slot,.chart.tall.sb-slot{height:290px;min-height:290px}.sb{height:275px}}
 @media(max-width:670px){.db-proof{padding:21px}.db-head{align-items:flex-start;flex-direction:column}.db-head h2{margin-bottom:2px}.db-grid{grid-template-columns:repeat(2,1fr)}.method-grid{grid-template-columns:1fr}.db-proof .server-tech{display:none}}
 '''
@@ -2233,7 +2234,7 @@ HTML = r'''<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name
 <article class="card s4"><h3>Estado del inventario</h3><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_stockrange">Esperando respuesta de Python…</div><img class="sb" id="img_ch_stockrange" alt="Gráfico Seaborn ch_stockrange" hidden></div></article>
 <article class="card s8"><h3>Listado de productos con bajo stock</h3><p id="stock_explainer"></p><div class="table-wrap"><table><thead><tr><th>Referencia</th><th>Familia</th><th>Bloque</th><th class="r">Stock</th><th class="r">Precio</th></tr></thead><tbody id="stockTable"></tbody></table></div></article>
 <article class="card s12"><div class="hrow"><div><h3>Ranking detallado de productos</h3><p>Los diez productos que concentran el mayor ingreso en la selección.</p></div><span class="badge">Tabla dinámica</span></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Producto</th><th class="r">Ingresos</th><th class="r">Unidades</th></tr></thead><tbody id="topTable"></tbody></table></div></article></div></section>
-<section id="seaborn"><div class="section-head"><div><div class="micro">06 / Procesamiento en Python</div><h2>Visualizaciones Seaborn</h2></div><p id="sb_info" role="status">Preparando gráficos con Seaborn…</p></div>
+<section id="seaborn"><div class="section-head"><div><div class="micro">06 / Análisis con Python</div><h2>21 gráficos · Seaborn</h2></div><p id="sb_info" role="status">Generación activa en el servidor Python</p></div>
 
 <div class="grid"><article class="card s6"><div class="hrow"><div><h3>Ingresos por familia</h3><p>Comparación de ingresos, en millones COP.</p></div><span class="badge">SEABORN</span></div><div class="sb-slot"><div class="sb-placeholder" id="pending_familias">Esperando respuesta de Python…</div><img class="sb" id="img_familias" alt="Gráfico Seaborn de ingresos por familia" hidden></div></article>
 <article class="card s6"><div class="hrow"><div><h3>Actividad por día y hora</h3><p>Frecuencia de líneas de venta por franja horaria.</p></div><span class="badge">SEABORN</span></div><div class="sb-slot"><div class="sb-placeholder" id="pending_calor">Esperando respuesta de Python…</div><img class="sb" id="img_calor" alt="Mapa de calor Seaborn por día y hora" hidden></div></article>
@@ -2250,6 +2251,9 @@ def construir_html(ventas,inventario,personal,qa,origen,output,dinamico=False):
           .replace('__PERSONAL__',safe_json(personal)).replace('__QA__',safe_json(qa))\
           .replace('__DINAMICO__','true' if dinamico else 'false').replace('__CHART_KINDS__',json.dumps(__import__('charts').KINDS))
     html=HTML.replace('__CSS__',CSS)
+    html=re.sub(r'(<h3>[^<]+</h3>)(<div class="chart)',
+                r'<div class="chart-heading">\1<span class="badge seaborn-badge">SEABORN · PYTHON</span></div>\2',html)
+    html=html.replace('<span class="badge">SEABORN</span>','<span class="badge seaborn-badge">SEABORN · PYTHON</span>')
     html=html.replace('__JS__',js).replace('__ORIGEN__',origen)
     html=html.replace('__INTERVALO__',qa['rango_desde']+' a '+qa['rango_hasta'])
     original = qa.get('conciliacion_original', False)
