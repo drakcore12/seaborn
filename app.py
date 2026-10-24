@@ -58,12 +58,12 @@ async def seaborn_charts(request: Request):
         return {kind: imagen_seaborn(selected, kind) for kind in ('familias','calor','dispersion')}
 
 def imagen_seaborn(ventas,tipo):
-    """Tres gráficos generados de VERDAD con Seaborn, no emulaciones JS."""
+    """Genera un SVG con Seaborn para los registros filtrados."""
     sns.set_theme(style='darkgrid',font_scale=.9)
-    bg='#101b29';fg='#dbe8f1';grid='#2c3c50'
+    bg='#ffffff';fg='#23354b';grid='#d8e1e9'
     plt.rcParams.update({'figure.facecolor':bg,'savefig.facecolor':bg,'axes.facecolor':bg,
-                         'axes.labelcolor':fg,'text.color':fg,'xtick.color':'#9fb1c6',
-                         'ytick.color':'#9fb1c6','axes.edgecolor':grid,'grid.color':grid,
+                         'axes.labelcolor':fg,'text.color':fg,'xtick.color':'#53677c',
+                         'ytick.color':'#53677c','axes.edgecolor':grid,'grid.color':grid,
                          'font.family':'DejaVu Sans','svg.fonttype':'none'})
     fig,ax=plt.subplots(figsize=(9,3.8),dpi=110)
     if not ventas:
@@ -73,14 +73,14 @@ def imagen_seaborn(ventas,tipo):
         ag=defaultdict(float)
         for x in ventas: ag[x['familia']]+=x['venta']
         best=sorted(ag,key=ag.get,reverse=True)[:9]
-        sns.barplot(x=[ag[x]/1e6 for x in best][::-1],y=best[::-1],ax=ax,color='#4ebfc0')
+        sns.barplot(x=[ag[x]/1e6 for x in best][::-1],y=best[::-1],ax=ax,color='#244f79')
         ax.set_xlabel('Millones de pesos colombianos');ax.set_ylabel('')
         ax.set_title('Ingresos por familia · Seaborn',pad=13,color=fg)
     elif tipo=='calor':
         arr=np.zeros((7,24),dtype=int)
         for x in ventas:arr[int(x['dia_semana']),int(x['hora'])]+=1
         hours=list(range(24))
-        sns.heatmap(arr,ax=ax,cmap='mako',linewidths=.6,linecolor='#142133',
+        sns.heatmap(arr,ax=ax,cmap='mako',linewidths=.6,linecolor='#edf2f6',
                     xticklabels=[f'{h:02d}' for h in hours],
                     yticklabels=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],
                     cbar_kws={'label':'Líneas de venta'})
@@ -91,7 +91,7 @@ def imagen_seaborn(ventas,tipo):
         sub=[x for x in ventas if x['familia'] in fam]
         if sub:
             sns.boxplot(x=[x['familia'] for x in sub],y=[x['venta']/1000 for x in sub],
-                        order=fam,ax=ax,color='#a3a3f5',showfliers=True)
+                        order=fam,ax=ax,color='#6785ae',showfliers=True)
             ax.tick_params(axis='x',rotation=27)
         ax.set_xlabel('Familia');ax.set_ylabel('Importe de la línea (miles COP)')
         ax.set_title('Distribución del valor por familia · Seaborn',pad=13,color=fg)
