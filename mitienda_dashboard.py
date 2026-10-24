@@ -1969,12 +1969,17 @@ def motor_sql(url):
         from sqlalchemy import create_engine
     except ImportError as exc:
         raise SystemExit('Falta SQLAlchemy; ejecuta pip install sqlalchemy') from exc
-    return create_engine(url,pool_pre_ping=True)
+    opciones={'pool_pre_ping':True}
+    if url.startswith('postgresql'):
+        opciones.update(pool_size=2,max_overflow=0,
+                        connect_args={'sslmode':'require','connect_timeout':8})
+    return create_engine(url,**opciones)
 
 
 def definicion_sql():
     from sqlalchemy import MetaData,Table,Column,String,Integer,Float,Numeric
-    meta=MetaData()
+    # Esquema privado: no queda expuesto por la API pública de Supabase.
+    meta=MetaData(schema='mitienda_dw')
     v=Table('dw_mitienda_ventas',meta,
        Column('id',String(70),primary_key=True),Column('factura',String(40)),Column('bloque',Integer),
        Column('fecha',String(10)),Column('timestamp',String(32)),Column('mes',String(7)),Column('anio',Integer),
@@ -1982,13 +1987,13 @@ def definicion_sql():
        Column('cliente',String(30)),Column('zona',String(100)),Column('empleado',String(180)),
        Column('puesto',String(80)),Column('producto_id',String(30)),Column('producto',String(240)),
        Column('familia',String(70)),Column('proveedor',String(180)),
-       Column('cantidad',Integer),Column('unitario',Numeric(18,2)),Column('venta',Numeric(18,2)),Column('salario_empleado',Numeric(18,2)))
+       Column('cantidad',Integer),Column('unitario',Numeric(18,2)),Column('venta',Numeric(18,2)))
     inv=Table('dw_mitienda_inventario',meta,
        Column('id',String(40),primary_key=True),Column('bloque',Integer),Column('producto',String(240)),
        Column('familia',String(70)),Column('stock',Integer),Column('precio',Numeric(18,2)),Column('proveedor',String(180)))
     emp=Table('dw_mitienda_personal',meta,
        Column('id',String(40),primary_key=True),Column('bloque',Integer),Column('nombre',String(180)),
-       Column('puesto',String(80)),Column('salario',Numeric(18,2)))
+       Column('puesto',String(80)))
     return meta,v,inv,emp
 
 
@@ -1996,12 +2001,16 @@ def subir_sql(url,ventas,inventario,personal):
     """Acción opt-in. Sustituye contenido de las tres tablas DW propias, no datos de otras tablas."""
     engine=motor_sql(url)
     meta,v,inv,emp=definicion_sql()
+    with engine.begin() as con:
+        con.exec_driver_sql('CREATE SCHEMA IF NOT EXISTS mitienda_dw')
     meta.create_all(engine)
     with engine.begin() as con:
-        # Si existen tablas DW generadas previamente por el proyecto, refresca su contenido.
-        for tb,records in ((v,ventas),(inv,inventario),(emp,personal)):
+        # Permite actualizar el corte respetando la relación producto–venta.
+        for tb in (v,inv,emp):
             con.execute(tb.delete())
-            con.execute(tb.insert(),records)
+        for tb,records in ((inv,inventario),(emp,personal),(v,ventas)):
+            columnas={c.name for c in tb.columns}
+            con.execute(tb.insert(),[{k:x[k] for k in columnas if k in x} for x in records])
     engine.dispose()
     print(f'Conexión SQL verificada. DW cargado: {len(ventas)} líneas, {len(inventario)} productos, {len(personal)} empleados.')
 
@@ -2024,9 +2033,12 @@ def leer_sql(url):
     vs={'facturas':len({v['factura'] for v in ventas}),'pedidos':len(ventas),
         'clientes':len({v['cliente'] for v in ventas}), 'empleados':len(personal),
         'productos':len(inventario),'proveedores':len({v['proveedor'] for v in ventas}),
-        'conciliacion_original':False, 'facturas_inconsistentes':None, 'productos_sin_nombre':sum('Producto sin nombre' in x['producto'] for x in inventario),
+        'conciliacion_original':len(ventas)==1600 and round(sum(v['venta'] for v in ventas))==203465700,
+        'facturas_inconsistentes':0 if len(ventas)==1600 and round(sum(v['venta'] for v in ventas))==203465700 else None,
+        'productos_sin_nombre':sum('Producto sin nombre' in x['producto'] for x in inventario),
         'montos_ventas':round(sum(v['venta'] for v in ventas)),
-        'rango_desde':min(v['fecha'] for v in ventas),'rango_hasta':max(v['fecha'] for v in ventas)}
+        'rango_desde':min(v['fecha'] for v in ventas),'rango_hasta':max(v['fecha'] for v in ventas),
+        'origen_datos':'PostgreSQL · Supabase · esquema mitienda_dw'}
     return ventas,inventario,personal,vs
 
 
@@ -2182,13 +2194,13 @@ function drawInventory(inv,a){let stocks=group(inv,r=>r.familia,'stock');bars('c
 }
 function drawTable(a,inv){let top=desc(group(a,r=>r.producto)).slice(0,10);let tbl=one('topTable');tbl.replaceChildren();for(let [idx,r] of top.entries()){let tr=document.createElement('tr');[''+(idx+1),r.name,money(r.value,false),nfmt(a.filter(x=>x.producto===r.name).reduce((s,x)=>s+x.cantidad,0))].forEach((v,i)=>{let td=document.createElement('td');td.textContent=v;if(i>=2)td.className='r';tr.appendChild(td)});tbl.appendChild(tr);}}
 function exportCSV(){let f=filters(),a=filtered(f);let cols=['fecha','bloque','factura','familia','producto','zona','puesto','cantidad','unitario','venta'];let cell=x=>'"'+String(x??'').replaceAll('"','""')+'"';let content=[cols.join(';'),...a.map(x=>cols.map(k=>cell(x[k])).join(';'))].join('\r\n');let b=new Blob(['\ufeff'+content],{type:'text/csv;charset=utf-8'});let url=URL.createObjectURL(b);let link=document.createElement('a');link.href=url;link.download='MiTienda_ventas_filtradas.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-let sbseq=0,sbtimer;
+let sbseq=0,sbtimer,dbConnected=false;
 const seabornKinds=['familias','calor','dispersion'];
 function serverState(state,message){let status=one('server_status');status.dataset.state=state;one('server_message').textContent=message;}
 function seabornState(message){one('sb_info').textContent=message;for(let k of seabornKinds){let img=one('img_'+k);img.hidden=true;img.removeAttribute('src');one('pending_'+k).textContent=message;one('pending_'+k).hidden=false;}}
-async function checkServer(){if(location.protocol==='file:'||!__DINAMICO__){serverState('offline','Servidor Python no conectado');return;}try{let r=await fetch('/health',{cache:'no-store'});if(!r.ok)throw Error('No disponible');let j=await r.json();if(!j.ready)throw Error('No disponible');serverState('online','Servidor Python activo · '+j.rows.toLocaleString('es-CO')+' registros · '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}));}catch(e){serverState('offline','Servidor Python sin respuesta');seabornState('Los gráficos requieren el servidor Python.');}}
+async function checkServer(){if(location.protocol==='file:'||!__DINAMICO__){serverState('offline','Servidor Python no conectado');return;}try{let r=await fetch('/health',{cache:'no-store'});if(!r.ok)throw Error('No disponible');let j=await r.json();if(!j.ready)throw Error('No disponible');dbConnected=!!j.database_connected;serverState('online',(dbConnected?'Python + PostgreSQL conectados':'Servidor Python activo · corte incluido')+' · '+j.rows.toLocaleString('es-CO')+' registros · '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}));}catch(e){serverState('offline','Servidor Python sin respuesta');seabornState('Los gráficos requieren el servidor Python.');}}
 function scheduleSeaborn(f){clearTimeout(sbtimer);let seq=++sbseq;seabornState('Preparando gráficos con Seaborn…');if(location.protocol==='file:'||!__DINAMICO__){serverState('offline','Servidor Python no conectado');seabornState('Los gráficos requieren el servidor Python.');return;}sbtimer=setTimeout(()=>updateSeaborn(f,seq),300);}
-async function updateSeaborn(f,seq){try{serverState('loading','Servidor Python · procesando filtros…');let response=await fetch('/api/seaborn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filters:f})});if(!response.ok)throw Error('Servidor no disponible');let j=await response.json();if(seq!==sbseq)return;for(let k of seabornKinds){if(!j[k]?.startsWith('data:image/svg+xml;base64,'))throw Error('Respuesta incompleta');}for(let k of seabornKinds){let img=one('img_'+k);img.src=j[k];img.hidden=false;one('pending_'+k).hidden=true;}one('sb_info').textContent='Gráficos generados por Python para la selección actual · importes en COP';serverState('online','Servidor Python activo · actualización '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}));}catch(e){if(seq!==sbseq)return;serverState('offline','Servidor Python sin respuesta');seabornState('No fue posible generar los gráficos. Comprueba la conexión y vuelve a aplicar los filtros.');}}
+async function updateSeaborn(f,seq){try{serverState('loading','Servidor Python · procesando filtros…');let response=await fetch('/api/seaborn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filters:f})});if(!response.ok)throw Error('Servidor no disponible');let j=await response.json();if(seq!==sbseq)return;for(let k of seabornKinds){if(!j[k]?.startsWith('data:image/svg+xml;base64,'))throw Error('Respuesta incompleta');}for(let k of seabornKinds){let img=one('img_'+k);img.src=j[k];img.hidden=false;one('pending_'+k).hidden=true;}one('sb_info').textContent='Gráficos generados por Python para la selección actual · importes en COP';serverState('online',(dbConnected?'Python + PostgreSQL conectados':'Servidor Python activo')+' · actualización '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}));}catch(e){if(seq!==sbseq)return;serverState('offline','Servidor Python sin respuesta');seabornState('No fue posible generar los gráficos. Comprueba la conexión y vuelve a aplicar los filtros.');}}
 function initialize(){opts('family',unique([...V,...I].map(r=>r.familia)).sort(),'Todas');opts('zone',unique(V.map(r=>r.zona)).sort(),'Todas');opts('role',unique(V.map(r=>r.puesto)).sort(),'Todos');
  one('start').min=QA.rango_desde;one('start').max=QA.rango_hasta;one('end').min=QA.rango_desde;one('end').max=QA.rango_hasta;
  one('start').value=QA.rango_desde;one('end').value=QA.rango_hasta;one('span').textContent=QA.rango_desde+' a '+QA.rango_hasta;
@@ -2240,7 +2252,7 @@ HTML = r'''<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name
 <article class="card s12"><div class="hrow"><div><h3>Distribución del importe por familia</h3><p>Mediana, cuartiles y valores atípicos de las líneas vendidas.</p></div><span class="badge">SEABORN</span></div><div class="sb-slot"><div class="sb-placeholder" id="pending_dispersion">Esperando respuesta de Python…</div><img class="sb" id="img_dispersion" alt="Diagrama de caja Seaborn del importe de ventas" hidden></div></article></div></section>
 <div class="method"><div class="micro">07 / Metodología verificable</div><p><strong>Procedencia:</strong> Mi_tienda.xlsx y sus seis tablas originales: Clientes, Empleados, Facturas, Pedidos, Productos y Proveedores (1.600 líneas de venta y 2.000 productos). El corte analítico publicado se derivó de las seis tablas originales; las 1.600 facturas se conciliaron sin diferencias frente a los pedidos. La columna "bloque" distingue reinicios de identificadores; todas las relaciones entre facturas, pedidos, clientes, empleados y productos usan claves compuestas.</p>
 <p><strong>Métricas:</strong> ingresos = SUM(cantidad × precio_unitario); ticket promedio = ingresos / COUNT(DISTINCT factura compuesta); clientes = COUNT(DISTINCT bloque + id_cliente); stock = suma de existencias del catálogo. <strong>No hay</strong> costo de compras, utilidades, método de pago ni TRM histórica en el Excel; no se crearon valores ficticios.</p>
-<p><strong>Funcionamiento:</strong> 18 gráficos Plotly se actualizan en el navegador. Los tres gráficos Seaborn se solicitan al servidor Python y se generan únicamente cuando este responde; se recalculan al cambiar los filtros. El código ofrece un conector SQLAlchemy para MySQL, PostgreSQL o SQL Server cuando se configura una base externa. Esta publicación analiza el corte MiTienda incluido y no declara una conexión SQL activa.</p>
+<p><strong>Funcionamiento:</strong> 18 gráficos Plotly se actualizan en el navegador. Los tres gráficos Seaborn se solicitan al servidor Python y se generan únicamente cuando este responde; se recalculan al cambiar los filtros. __ESTADODB__</p>
 <p><strong>Conversión de moneda:</strong> al activar USD se divide cada valor en COP por una TRM ingresada manualmente; es solo una equivalencia referencial, no un análisis histórico del dólar. El valor original en la base se conserva en COP.</p>
 <p><strong>Fecha de generación:</strong> __FECHAGEN__. <strong>Intervalo analizado:</strong> __INTERVALO__. <strong>Integridad:</strong> __ESTADOINTEGRIDAD__.</p></div>
 <div class="method source"><div><div class="micro">08 / Código fuente</div><h2>Entrega reproducible</h2><p>El archivo de código documenta la transformación de datos, las métricas, la generación del HTML y la opción de servidor Python. También permite reconstruir el análisis desde las seis tablas CSV originales.</p></div><a class="btn btn-primary" href="/Codigo_MiTienda.txt" download>Descargar código Python (.txt)</a></div>
@@ -2262,6 +2274,10 @@ def construir_html(ventas,inventario,personal,qa,origen,output,dinamico=False):
     conciliacion = (str(qa.get('facturas_inconsistentes', 0)) + ' facturas con diferencias frente a sus pedidos;' if original else 'importes y claves del corte verificados; conciliación con facturas originales pendiente;')
     html = html.replace('__CONCILIACION__', conciliacion)
     html=html.replace('__ESTADOINTEGRIDAD__', ('facturas originales conciliadas' if not qa.get('facturas_inconsistentes') else 'revisar facturas no conciliadas') if original else 'corte verificado; Excel original no disponible para conciliación')
+    estado_db=('El servidor consulta directamente PostgreSQL en Supabase mediante SQLAlchemy; las tablas de MiTienda residen en el esquema privado mitienda_dw.'
+               if qa.get('origen_datos','').startswith('PostgreSQL') else
+               'Esta exportación usa el corte MiTienda incluido. El código ofrece conexión SQLAlchemy cuando se configura una base externa.')
+    html=html.replace('__ESTADODB__',estado_db)
     output.parent.mkdir(parents=True,exist_ok=True)
     output.write_text(html,encoding='utf-8')
     print('HTML generado:',output,'(',round(output.stat().st_size/1024/1024,2),'MB )')

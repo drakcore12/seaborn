@@ -5,6 +5,7 @@ from pathlib import Path
 import base64
 import json
 import threading
+import os
 
 import matplotlib
 matplotlib.use('Agg')
@@ -14,11 +15,16 @@ import seaborn as sns
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from mitienda_dashboard import construir_html
+from warehouse import comprobar, leer_dashboard, ventas_filtradas
 
 with (Path(__file__).parent / 'sales.json').open(encoding='utf-8') as source:
     VENTAS = json.load(source)
 assert len(VENTAS) == 1600 and sum(r['venta'] for r in VENTAS) == 203465700
 LOCK = threading.Lock()
+HTML_LOCK = threading.Lock()
+DB_URL = os.environ.get("MITIENDA_DATABASE_URL", "")
+DB_HTML = Path("/tmp/mitienda_postgresql_dashboard.html")
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 app.add_middleware(CORSMiddleware,
     allow_origins=['https://mitienda-analitica-miguel.drackore.chatgpt.site'],
@@ -26,7 +32,17 @@ app.add_middleware(CORSMiddleware,
 
 @app.get('/health')
 def health():
-    return {'ready': True, 'source': 'Mi_tienda.xlsx / seis CSV', 'rows': len(VENTAS)}
+    if DB_URL:
+        try:
+            stats = comprobar(DB_URL)
+            if stats['rows'] != 1600 or stats['revenue_cop'] != 203465700:
+                raise ValueError('Integridad de MiTienda no verificada')
+        except Exception:
+            raise HTTPException(status_code=503, detail='Base de datos no disponible')
+        return {'ready': True, 'source': 'Supabase PostgreSQL / mitienda_dw',
+                'database_connected': True, **stats}
+    return {'ready': True, 'source': 'Corte MiTienda incluido',
+            'database_connected': False, 'rows': len(VENTAS)}
 
 @app.post('/api/seaborn')
 async def seaborn_charts(request: Request):
@@ -45,7 +61,13 @@ async def seaborn_charts(request: Request):
             raise ValueError('Bloque no válido')
     except (ValueError, TypeError, KeyError, json.JSONDecodeError):
         raise HTTPException(status_code=400, detail='Solicitud de filtros no válida')
-    selected = [r for r in VENTAS
+    if DB_URL:
+        try:
+            selected = ventas_filtradas(DB_URL, f)
+        except Exception:
+            raise HTTPException(status_code=503, detail='No se pudo consultar PostgreSQL')
+    else:
+        selected = [r for r in VENTAS
         if (not f.get('start') or r['fecha'] >= f['start'])
         and (not f.get('end') or r['fecha'] <= f['end'])
         and (not block or r['bloque'] == block)
@@ -106,6 +128,16 @@ def imagen_seaborn(ventas,tipo):
 
 @app.get('/')
 def dashboard():
+    if DB_URL:
+        with HTML_LOCK:
+            if not DB_HTML.exists():
+                try:
+                    ventas, inventario, personal, qa = leer_dashboard(DB_URL)
+                    construir_html(ventas, inventario, personal, qa,
+                        'POSTGRESQL / SUPABASE · MITIENDA', DB_HTML, dinamico=True)
+                except Exception:
+                    raise HTTPException(status_code=503, detail='No se pudo generar el dashboard desde PostgreSQL')
+        return FileResponse(DB_HTML, media_type='text/html')
     return FileResponse(Path(__file__).parent / 'index.html', media_type='text/html')
 
 @app.get('/Codigo_MiTienda.txt')

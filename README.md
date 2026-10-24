@@ -15,3 +15,7 @@ uvicorn app:app --host 127.0.0.1 --port 8050
 ```
 
 Abre `http://127.0.0.1:8050/`. `/health` confirma las 1.600 filas. Para regenerar desde los seis CSV originales, usa `mitienda_dashboard.py --fuente csv --carpeta datos --servidor` con la carpeta `datos` de la entrega original. La conexión SQL opcional requiere una base real y `MITIENDA_DATABASE_URL`; no se simula una conexión activa.
+
+## PostgreSQL en Supabase (punto adicional)
+
+La migración `sql/001_mitienda_dw.sql` prepara tres tablas analíticas en un esquema privado, sin exponerlas a la API pública. El generador admite `--fuente csv --carpeta datos --cargar-sql` para cargar las tablas desde los seis CSV originales. El servidor FastAPI usa `MITIENDA_DATABASE_URL` como variable de entorno; con ella configurada, consulta PostgreSQL para el HTML y cada solicitud Seaborn, y `/health` informa `database_connected: true`. Para Render se utiliza la cadena **Session pooler** de Supabase, con SSL; la contraseña se establece solo en el entorno de Render y no se publica en GitHub.
