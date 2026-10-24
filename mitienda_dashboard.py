@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 MITIENDA · informe académico de analítica comercial
-Python 3.10+ · Seaborn · Plotly · HTML · SQLAlchemy · servidor HTTP Python incluido.
+Python 3.10+ · Seaborn · HTML · SQLAlchemy · servidor HTTP Python incluido.
 
 FUENTE ORIGINAL
     El archivo Mi_tienda.xlsx y sus seis CSV originales se localizaron en la
@@ -13,7 +13,7 @@ FUENTE ORIGINAL
     datos del paquete de entrega y usa --fuente csv --carpeta datos.
 
 EJECUCIÓN
-    pip install seaborn matplotlib plotly numpy
+    pip install seaborn matplotlib numpy
     # Guarda este TXT como mitienda_dashboard.py (conservando UTF-8).
     python mitienda_dashboard.py
     python mitienda_dashboard.py --servidor
@@ -38,7 +38,7 @@ PRECISIÓN Y RESPONSABILIDAD
     El inventario es una foto puntual, no serie histórica.
     El Excel no contiene tasas del dólar, costos ni método de pago; no se inventan.
     Los gráficos Seaborn solo aparecen cuando responde el servidor Python;
-    se recalculan con cada filtro. Plotly funciona sin conexión a Internet.
+    se recalculan con cada filtro. Todas las figuras requieren Python.
     El HTML no incluye direcciones, teléfonos ni correos de clientes.
 """
 import argparse
@@ -63,7 +63,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from plotly.offline import get_plotlyjs
 
 BASE = Path(__file__).resolve().parent
 DATOS = BASE / 'datos'
@@ -2133,61 +2132,41 @@ body{background:var(--bg);color:var(--text)}
 .table-wrap{border-color:#e1e8ef}th{background:#edf2f6;color:#436078;border-color:#e1e9ef}td{color:#34495e;border-color:#e5ecf1}tr:hover td{background:#f5f8fa}.warn{color:#a16a33}
 .server-status{display:flex;align-items:center;gap:9px;padding:12px 16px;margin-bottom:17px;border:1px solid #cfdae4;background:#fff;border-radius:8px;color:#526a80;font-size:12px;font-weight:650}.server-dot{width:9px;height:9px;border-radius:50%;background:#b2965f;box-shadow:0 0 0 4px #b2965f22}.server-status[data-state=online] .server-dot{background:#2e806b;box-shadow:0 0 0 4px #2e806b22}.server-status[data-state=offline] .server-dot{background:#aa6258;box-shadow:0 0 0 4px #aa625822}.server-tech{margin-left:auto;color:#72879a;font-size:11px;font-weight:500}.sb-slot{min-height:316px;display:grid;place-items:center}.sb-placeholder{text-align:center;color:#687e92;font-size:13px;padding:24px}.sb{width:100%;height:316px;object-fit:contain;margin:0}.sb[hidden],.sb-placeholder[hidden]{display:none}.source{display:flex;justify-content:space-between;align-items:center;gap:28px}.source h2{margin:4px 0 8px;color:#254461;font-size:21px}.source p{max-width:850px}
 @media(max-width:670px){.nav-download{display:inline-block}.nav-links{display:flex}.nav-links a:not(.nav-download){display:none}.hero{padding:30px 0}.source{display:block}.source .btn{display:inline-block;margin-top:15px}.server-tech{display:none}.sb-slot{min-height:260px}}
+/* Interfaz sobria con jerarquía tipográfica y superficies suaves. */
+:root{--bg:#f5f5f7;--text:#1d1d1f;--line:#e5e5e9;--mint:#1766ba}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',Arial,sans-serif;letter-spacing:-.012em}
+.wrap{max-width:1440px}.top{background:linear-gradient(180deg,#fff 0%,#f8f9fb 100%);border-color:var(--line)}
+.nav{border-color:var(--line)}.brand,.hero h1,.section-head h2,.card h3,.kpi .value{color:#1d1d1f}
+.hero{padding:62px 0}.hero h1{font-weight:700;letter-spacing:-.055em}.hero h1 span{color:#1766ba}
+.eyebrow,.micro{color:#536b86;letter-spacing:.11em}.hero p,.card p,.section-head p{color:#626c78}
+.controls,.card,.kpi,.method,.server-status{background:#fff;border:1px solid #e7e9ec;border-radius:22px;box-shadow:0 6px 24px rgba(21,32,48,.035)}
+.grid{gap:18px}.card{padding:24px}.kpi{padding:22px}.card h3{font-size:15px;font-weight:650}
+.btn,.nav-download,.origin,.badge,.notice,.field input,.field select,.table-wrap{border-radius:13px}
+.btn-primary{background:#1766ba;border-color:#1766ba}.btn-primary:hover{background:#125396;color:#fff}
+.field input,.field select{border-color:#dfe3e8;background:#fbfcfd}.field input:focus,.field select:focus{outline:2px solid #b6d6fc;border-color:#1766ba}
+.sb-slot{min-height:310px}.chart.sb-slot{height:345px}.chart.tall.sb-slot{height:390px}.sb{height:100%;max-height:370px}
+.sb-placeholder{color:#7b8794}.server-status[data-state=online] .server-dot{background:#36a579;box-shadow:0 0 0 4px #36a57922}
+@media(max-width:670px){.wrap{padding:0 18px}.hero{padding:38px 0}.card{padding:18px;border-radius:18px}.chart.sb-slot,.chart.tall.sb-slot{height:290px;min-height:290px}.sb{height:275px}}
 '''
 
 JS = r'''
 const V=__VENTAS__, I=__INVENTARIO__, E=__PERSONAL__, QA=__QA__;
-const COLORS=['#244f79','#4a789e','#71a3b7','#b99762','#668d78','#8077a2','#659ab0','#bd8b77','#8e9fbd','#6c9e93'];
-const BACK={paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{family:'Segoe UI,Arial',color:'#40546c',size:11},margin:{l:55,r:18,t:18,b:58},hoverlabel:{bgcolor:'#ffffff',font:{color:'#1c3149'}},
- xaxis:{gridcolor:'#e6edf3',zerolinecolor:'#e6edf3'},yaxis:{gridcolor:'#e6edf3',zerolinecolor:'#e6edf3'},legend:{orientation:'h',y:-.22}};
-const CONF={responsive:true,displaylogo:false,modeBarButtonsToRemove:['lasso2d','select2d','autoScale2d','zoomIn2d','zoomOut2d']};
 const one=id=>document.getElementById(id);const nfmt=x=>Math.round(x||0).toLocaleString('es-CO');const unique=a=>[...new Set(a)];
 const sum=(arr,col)=>arr.reduce((a,r)=>a+(+r[col]||0),0);const group=(arr,key,col='venta')=>{let out={};for(let r of arr){let k=key(r);out[k]=(out[k]||0)+(col==='count'?1:(+r[col]||0));}return Object.entries(out).map(([name,value])=>({name,value}));};
-const desc=a=>a.sort((x,y)=>y.value-x.value);const money=(x,compact=true)=>{if(!Number.isFinite(x))return '—';let s=one('currency').value;let trm=Math.max(1,+one('trm').value||4000);let v=s==='USD'?x/trm:x;let prefix=s==='USD'?'US$':'$';return compact?(Math.abs(v)>=1e9?prefix+(v/1e9).toFixed(2)+' mil M':Math.abs(v)>=1e6?prefix+(v/1e6).toFixed(2)+' M':Math.abs(v)>=1e3?prefix+(v/1e3).toFixed(1)+' mil':prefix+nfmt(v)):prefix+nfmt(v);};
-const cash=x=>one('currency').value==='USD'?x/Math.max(1,+one('trm').value||4000):x;
-const cc=()=>one('currency').value==='USD'?'USD (TRM manual)':'COP';
-const palette=i=>COLORS[i%COLORS.length];
-function lay(extra={}){return {...BACK,...extra,xaxis:{...BACK.xaxis,...(extra.xaxis||{})},yaxis:{...BACK.yaxis,...(extra.yaxis||{})}};}
-function render(id,traces,layout={}){try{Plotly.react(one(id),traces,lay(layout),CONF);}catch(e){one(id).textContent='No fue posible mostrar el gráfico: '+e.message;}}
-function empty(id,txt='Sin registros para los filtros seleccionados'){render(id,[],{annotations:[{xref:'paper',yref:'paper',x:.5,y:.5,showarrow:false,text:txt,font:{color:'#53677c'}}]});}
+const desc=a=>a.sort((x,y)=>y.value-x.value);const money=(x,compact=true)=>{if(!Number.isFinite(x))return '—';let t=Math.max(1,+one('trm').value||4000),usd=one('currency').value==='USD',v=usd?x/t:x,p=usd?'US$':'$';return compact?(Math.abs(v)>=1e9?p+(v/1e9).toFixed(2)+' mil M':Math.abs(v)>=1e6?p+(v/1e6).toFixed(2)+' M':Math.abs(v)>=1e3?p+(v/1e3).toFixed(1)+' mil':p+nfmt(v)):p+nfmt(v);};
 function opts(id,data,all){let sel=one(id),old=sel.value;sel.replaceChildren();for(let x of [all,...data]){let opt=document.createElement('option');opt.value=x===all?'':x;opt.textContent=x;sel.appendChild(opt);}sel.value=[...sel.options].some(x=>x.value===old)?old:'';}
 function filters(){return {start:one('start').value,end:one('end').value,block:+one('block').value||0,family:one('family').value,zone:one('zone').value,role:one('role').value,q:one('search').value.trim().toLocaleLowerCase('es-CO')};}
 function filtered(f){return V.filter(r=>(!f.start||r.fecha>=f.start)&&(!f.end||r.fecha<=f.end)&&(!f.block||r.bloque===f.block)&&(!f.family||r.familia===f.family)&&(!f.zone||r.zona===f.zone)&&(!f.role||r.puesto===f.role)&&(!f.q||r.producto.toLocaleLowerCase('es-CO').includes(f.q)||r.producto_id.toLocaleLowerCase('es-CO').includes(f.q)));}
 function filteredInventory(f){return I.filter(r=>(!f.block||r.bloque===f.block)&&(!f.family||r.familia===f.family)&&(!f.q||r.producto.toLocaleLowerCase('es-CO').includes(f.q)||r.id.toLocaleLowerCase('es-CO').includes(f.q)));}
 function setKpi(key,val,sub){one('k_'+key).textContent=val; if(sub!==undefined)one('s_'+key).textContent=sub;}
-function bars(id,a,opts={}){if(!a.length)return empty(id);let d=desc(a).slice(0,opts.limit||10).reverse();render(id,[{type:'bar',orientation:'h',y:d.map(x=>x.name),x:d.map(x=>opts.monetary?cash(x.value):x.value),marker:{color:d.map((_,i)=>palette(i))},text:d.map(x=>opts.monetary?money(x.value):nfmt(x.value)),textposition:'auto',hovertemplate:'%{y}<br>%{x:,.0f} '+(opts.monetary?cc():'')+'<extra></extra>'}],{margin:{l:opts.margin||100,r:16,t:18,b:40},showlegend:false,xaxis:{title:opts.monetary?cc():undefined,tickformat:',.0f'},yaxis:{gridcolor:'rgba(0,0,0,0)',automargin:true}});}
 const daynames=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-function compute(){let f=filters(),a=filtered(f), inv=filteredInventory(f),active=unique(a.map(x=>x.factura)).length,cl=unique(a.map(x=>x.cliente)).length,total=sum(a,'venta'),units=sum(a,'cantidad');
+function compute(){let f=filters(),a=filtered(f),inv=filteredInventory(f),active=unique(a.map(x=>x.factura)).length,cl=unique(a.map(x=>x.cliente)).length,total=sum(a,'venta');
  setKpi('revenue',money(total),nfmt(a.length)+' líneas de venta');setKpi('orders',nfmt(active),'Facturas únicas por bloque');setKpi('ticket',active?money(total/active):'—','Ingreso / facturas filtradas');
- setKpi('units',nfmt(units),'Unidades en pedidos');setKpi('customers',nfmt(cl),'Identificador compuesto por bloque');setKpi('stock',nfmt(sum(inv,'stock')),nfmt(inv.length)+' productos en catálogo');
+ setKpi('units',nfmt(sum(a,'cantidad')),'Unidades en pedidos');setKpi('customers',nfmt(cl),'Identificador compuesto por bloque');setKpi('stock',nfmt(sum(inv,'stock')),nfmt(inv.length)+' productos en catálogo');
  one('count').textContent=nfmt(a.length)+' registros · '+nfmt(inv.length)+' referencias en inventario';
  one('scope').textContent=a.length?`${a.map(x=>x.fecha).sort()[0]} — ${a.map(x=>x.fecha).sort().at(-1)}`:'Sin resultados';
- drawRevenue(a); drawProducts(a); drawPeople(a); drawInventory(inv,a); drawTable(a,inv); scheduleSeaborn(f);
-}
-function drawRevenue(a){
- let months=group(a,r=>r.mes).sort((x,y)=>x.name.localeCompare(y.name));if(!months.length){for(let id of ['ch_months','ch_month_orders','ch_years','ch_ticket','ch_week','ch_hour'])empty(id);return;}
- render('ch_months',[{type:'scatter',mode:'lines+markers',x:months.map(x=>x.name),y:months.map(x=>cash(x.value)),line:{color:'#244f79',width:3,shape:'spline'},marker:{size:6,color:'#71a3b7'},fill:'tozeroy',fillcolor:'rgba(36,79,121,.08)',hovertemplate:'%{x}<br>%{y:,.0f} '+cc()+'<extra></extra>'}],{xaxis:{title:'Mes'},yaxis:{title:'Ingresos · '+cc(),tickformat:',.0f'}});
- let invoiceMonths=new Map();for(let r of a){if(!invoiceMonths.has(r.mes))invoiceMonths.set(r.mes,new Set());invoiceMonths.get(r.mes).add(r.factura);}let t=[...invoiceMonths].map(([name,ids])=>({name,value:ids.size})).sort((x,y)=>x.name.localeCompare(y.name));render('ch_month_orders',[{type:'bar',x:t.map(x=>x.name),y:t.map(x=>x.value),marker:{color:'#4a789e'},hovertemplate:'%{x}<br>%{y} facturas<extra></extra>'}],{xaxis:{title:'Mes'},yaxis:{title:'Facturas únicas'}});
- let years=group(a,r=>''+r.anio);render('ch_years',[{type:'bar',x:years.map(x=>x.name),y:years.map(x=>cash(x.value)),marker:{color:years.map((_,i)=>palette(i))},text:years.map(x=>money(x.value)),textposition:'auto',hovertemplate:'%{x}<br>%{y:,.0f} '+cc()+'<extra></extra>'}],{xaxis:{title:'Año'},yaxis:{title:'Ingresos · '+cc()}});
- let mMap={};for(let r of a){(mMap[r.mes]??=new Map()).set(r.factura,(mMap[r.mes].get(r.factura)||0)+r.venta);}let avg=months.map(x=>({name:x.name,value:sum([...mMap[x.name].values()].map(value=>({value})),'value')/mMap[x.name].size}));
- render('ch_ticket',[{type:'scatter',mode:'lines+markers',x:avg.map(x=>x.name),y:avg.map(x=>cash(x.value)),line:{color:'#b99762',width:2},marker:{color:'#d7b987'},hovertemplate:'%{x}<br>%{y:,.0f} '+cc()+'<extra></extra>'}],{xaxis:{title:'Mes'},yaxis:{title:'Ticket promedio · '+cc()}});
- let dw=Array(7).fill(0);for(let r of a)dw[r.dia_semana]+=r.venta;render('ch_week',[{type:'bar',x:daynames.map(x=>x.slice(0,3)),y:dw.map(cash),marker:{color:COLORS.slice(0,7)},hovertemplate:'%{x}<br>%{y:,.0f} '+cc()+'<extra></extra>'}],{yaxis:{title:'Ingresos · '+cc()}});
- let hour=Array(24).fill(0);for(let r of a)hour[r.hora]++;render('ch_hour',[{type:'bar',x:hour.map((_,i)=>''+i+'h'),y:hour,marker:{color:'#8077a2'},hovertemplate:'%{x}<br>%{y} operaciones<extra></extra>'}],{xaxis:{title:'Hora (0–23)'},yaxis:{title:'Líneas'}});
-}
-function drawProducts(a){let fam=group(a,r=>r.familia);bars('ch_family',fam,{limit:12,monetary:true,margin:110});
- if(!fam.length)empty('ch_donut');else {let d=desc(fam).slice(0,9),other=fam.filter(x=>!d.includes(x)).reduce((s,x)=>s+x.value,0);if(other)d.push({name:'Otras',value:other});render('ch_donut',[{type:'pie',hole:.69,labels:d.map(x=>x.name),values:d.map(x=>cash(x.value)),marker:{colors:d.map((_,i)=>palette(i))},textinfo:'percent',textposition:'inside',hovertemplate:'%{label}<br>%{value:,.0f} '+cc()+'<extra></extra>'}],{margin:{l:12,r:12,t:20,b:22},showlegend:true,legend:{orientation:'h',font:{size:10},y:-.08}});}
- let pr=group(a,r=>r.producto);bars('ch_product',pr,{monetary:true,limit:8,margin:180});
- let qty=group(a,r=>r.familia,'cantidad');bars('ch_qty',qty,{limit:10,margin:100});}
-function drawPeople(a){let z=group(a,r=>r.zona);bars('ch_zone',z,{limit:12,monetary:true,margin:120});
- let emp=group(a,r=>r.empleado);bars('ch_employees',emp,{limit:10,monetary:true,margin:200});
- let pos=group(a,r=>r.puesto);bars('ch_roles',pos,{limit:10,monetary:true,margin:148});
- let prov=group(a,r=>r.proveedor);bars('ch_providers',prov,{limit:10,monetary:true,margin:200});
- let purchases=new Map();for(let r of a){if(!purchases.has(r.cliente))purchases.set(r.cliente,new Set());purchases.get(r.cliente).add(r.factura);}let by=[...purchases].map(([name,ids])=>({name,value:ids.size})), distribution=[0,0,0,0];for(let x of by){distribution[x.value===1?0:x.value===2?1:x.value<=4?2:3]++;}
- render('ch_customers',[{type:'bar',x:['1 compra','2 compras','3–4 compras','5 o más'],y:distribution,marker:{color:COLORS.slice(0,4)},text:distribution,textposition:'auto'}],{yaxis:{title:'Clientes distintos'},xaxis:{title:'Frecuencia en registros filtrados'}});
-}
-function drawInventory(inv,a){let stocks=group(inv,r=>r.familia,'stock');bars('ch_stocks',stocks,{limit:12,margin:120});
- let by=group(inv,r=>r.familia,'count');bars('ch_refs',by,{limit:12,margin:120});
- let byStock=[0,0,0,0,0];for(let r of inv){let s=r.stock;byStock[s===0?0:s<=10?1:s<=20?2:s<=50?3:4]++;}render('ch_stockrange',[{type:'bar',x:['Agotado (0)','1–10','11–20','21–50','Más de 50'],y:byStock,marker:{color:['#b67570','#c2a06b','#a9a678','#71a3b7','#668d78']},text:byStock,textposition:'auto'}],{yaxis:{title:'Referencias'}});
+ drawInventory(inv,a);drawTable(a,inv);scheduleSeaborn({...f,currency:one('currency').value,trm:+one('trm').value||4000});}
+function drawInventory(inv,a){
  let saleProd=new Set(a.map(r=>r.producto_id));let low=inv.filter(r=>r.stock<=20).sort((x,y)=>x.stock-y.stock).slice(0,12);
  let tbody=one('stockTable');tbody.replaceChildren();for(let r of low){let tr=document.createElement('tr');[r.producto,r.familia,'B'+r.bloque,''+r.stock,money(r.precio,false)].forEach((v,i)=>{let td=document.createElement('td');td.textContent=v;if(i>=3)td.className='r'+(i===3?' warn':'');tr.appendChild(td)});tbody.appendChild(tr)}
  one('stock_explainer').textContent=`Inventario de ${nfmt(inv.length)} referencias · ${nfmt(inv.filter(r=>r.stock<=20).length)} con existencias ≤ 20. Stock sin período temporal.`;
@@ -2195,12 +2174,12 @@ function drawInventory(inv,a){let stocks=group(inv,r=>r.familia,'stock');bars('c
 function drawTable(a,inv){let top=desc(group(a,r=>r.producto)).slice(0,10);let tbl=one('topTable');tbl.replaceChildren();for(let [idx,r] of top.entries()){let tr=document.createElement('tr');[''+(idx+1),r.name,money(r.value,false),nfmt(a.filter(x=>x.producto===r.name).reduce((s,x)=>s+x.cantidad,0))].forEach((v,i)=>{let td=document.createElement('td');td.textContent=v;if(i>=2)td.className='r';tr.appendChild(td)});tbl.appendChild(tr);}}
 function exportCSV(){let f=filters(),a=filtered(f);let cols=['fecha','bloque','factura','familia','producto','zona','puesto','cantidad','unitario','venta'];let cell=x=>'"'+String(x??'').replaceAll('"','""')+'"';let content=[cols.join(';'),...a.map(x=>cols.map(k=>cell(x[k])).join(';'))].join('\r\n');let b=new Blob(['\ufeff'+content],{type:'text/csv;charset=utf-8'});let url=URL.createObjectURL(b);let link=document.createElement('a');link.href=url;link.download='MiTienda_ventas_filtradas.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 let sbseq=0,sbtimer,dbConnected=false;
-const seabornKinds=['familias','calor','dispersion'];
+const seabornKinds=__CHART_KINDS__;
 function serverState(state,message){let status=one('server_status');status.dataset.state=state;one('server_message').textContent=message;}
 function seabornState(message){one('sb_info').textContent=message;for(let k of seabornKinds){let img=one('img_'+k);img.hidden=true;img.removeAttribute('src');one('pending_'+k).textContent=message;one('pending_'+k).hidden=false;}}
 async function checkServer(){if(location.protocol==='file:'||!__DINAMICO__){serverState('offline','Servidor Python no conectado');return;}try{let r=await fetch('/health',{cache:'no-store'});if(!r.ok)throw Error('No disponible');let j=await r.json();if(!j.ready)throw Error('No disponible');dbConnected=!!j.database_connected;serverState('online',(dbConnected?'Python + PostgreSQL conectados':'Servidor Python activo · corte incluido')+' · '+j.rows.toLocaleString('es-CO')+' registros · '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}));}catch(e){serverState('offline','Servidor Python sin respuesta');seabornState('Los gráficos requieren el servidor Python.');}}
 function scheduleSeaborn(f){clearTimeout(sbtimer);let seq=++sbseq;seabornState('Preparando gráficos con Seaborn…');if(location.protocol==='file:'||!__DINAMICO__){serverState('offline','Servidor Python no conectado');seabornState('Los gráficos requieren el servidor Python.');return;}sbtimer=setTimeout(()=>updateSeaborn(f,seq),300);}
-async function updateSeaborn(f,seq){try{serverState('loading','Servidor Python · procesando filtros…');let response=await fetch('/api/seaborn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filters:f})});if(!response.ok)throw Error('Servidor no disponible');let j=await response.json();if(seq!==sbseq)return;for(let k of seabornKinds){if(!j[k]?.startsWith('data:image/svg+xml;base64,'))throw Error('Respuesta incompleta');}for(let k of seabornKinds){let img=one('img_'+k);img.src=j[k];img.hidden=false;one('pending_'+k).hidden=true;}one('sb_info').textContent='Gráficos generados por Python para la selección actual · importes en COP';serverState('online',(dbConnected?'Python + PostgreSQL conectados':'Servidor Python activo')+' · actualización '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}));}catch(e){if(seq!==sbseq)return;serverState('offline','Servidor Python sin respuesta');seabornState('No fue posible generar los gráficos. Comprueba la conexión y vuelve a aplicar los filtros.');}}
+async function updateSeaborn(f,seq){try{serverState('loading','Servidor Python · procesando filtros…');let response=await fetch('/api/seaborn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filters:f})});if(!response.ok)throw Error('Servidor no disponible');let j=await response.json();if(seq!==sbseq)return;for(let k of seabornKinds){if(!j[k]?.startsWith('data:image/svg+xml;base64,'))throw Error('Respuesta incompleta');}for(let k of seabornKinds){let img=one('img_'+k);img.src=j[k];img.hidden=false;one('pending_'+k).hidden=true;}one('sb_info').textContent='21 gráficos generados por Python para la selección actual · importes en '+f.currency;serverState('online',(dbConnected?'Python + PostgreSQL conectados':'Servidor Python activo')+' · actualización '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}));}catch(e){if(seq!==sbseq)return;serverState('offline','Servidor Python sin respuesta');seabornState('No fue posible generar los gráficos. Comprueba la conexión y vuelve a aplicar los filtros.');}}
 function initialize(){opts('family',unique([...V,...I].map(r=>r.familia)).sort(),'Todas');opts('zone',unique(V.map(r=>r.zona)).sort(),'Todas');opts('role',unique(V.map(r=>r.puesto)).sort(),'Todos');
  one('start').min=QA.rango_desde;one('start').max=QA.rango_hasta;one('end').min=QA.rango_desde;one('end').max=QA.rango_hasta;
  one('start').value=QA.rango_desde;one('end').value=QA.rango_hasta;one('span').textContent=QA.rango_desde+' a '+QA.rango_hasta;
@@ -2211,10 +2190,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 '''
 
 HTML = r'''<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Dashboard académico MiTienda, Python, Seaborn, Plotly, CSV y SQLAlchemy">
-<title>MiTienda | Informe de analítica comercial</title><style>__CSS__</style><script>__PLOTLYJS__</script></head>
+<meta name="description" content="Dashboard académico MiTienda, Python, Seaborn, CSV y SQLAlchemy">
+<title>MiTienda | Informe de analítica comercial</title><style>__CSS__</style></head>
 <body><header class="top"><div class="wrap"><nav class="nav"><div class="brand">MiTienda <b>· Informe académico</b></div><div class="nav-links"><a href="#resumen">Resumen</a><a href="#ventas">Ventas</a><a href="#productos">Productos</a><a href="#clientes">Clientes y equipo</a><a href="#inventario">Inventario</a><a href="#seaborn">Seaborn</a><a class="nav-download" href="/Codigo_MiTienda.txt" download>Descargar código .txt</a></div></nav>
-<div class="hero"><div><div class="eyebrow">Dashboard de analítica comercial · MiTienda</div><h1>Informe de resultados<span>.</span></h1><p>Análisis de ventas, clientes, productos e inventario a partir de la base MiTienda. Las visualizaciones Plotly permiten explorar el conjunto de datos; Python genera los gráficos Seaborn para cada selección de filtros.</p><div class="hero-actions"><a class="btn btn-primary" href="/Codigo_MiTienda.txt" download>Descargar código Python (.txt)</a><span class="origin">__ORIGEN__</span></div></div><div class="corner"><strong>MiTienda</strong><small id="origin_detail"></small><br><small id="span"></small><br><small>Colombia · COP</small></div></div></div></header>
+<div class="hero"><div><div class="eyebrow">Dashboard de analítica comercial · MiTienda</div><h1>Informe de resultados<span>.</span></h1><p>Análisis de ventas, clientes, productos e inventario a partir de la base MiTienda. Las 21 visualizaciones se generan con Seaborn en Python y se recalculan con cada selección de filtros.</p><div class="hero-actions"><a class="btn btn-primary" href="/Codigo_MiTienda.txt" download>Descargar código Python (.txt)</a><span class="origin">__ORIGEN__</span></div></div><div class="corner"><strong>MiTienda</strong><small id="origin_detail"></small><br><small id="span"></small><br><small>Colombia · COP</small></div></div></div></header>
 <main class="wrap content"><section class="controls" id="resumen"><div class="control-heading"><div><div class="micro">01 / Exploración interactiva</div><div style="font-size:16px;font-weight:800;margin-top:5px">Segmenta y analiza los resultados</div></div><span class="right-detail" id="count"></span></div>
 <div class="fields"><div class="field"><label for="start">Desde</label><input type="date" id="start"></div><div class="field"><label for="end">Hasta</label><input type="date" id="end"></div>
 <div class="field"><label for="block">Bloque de origen</label><select id="block"><option value="">Todos</option><option value="1">Bloque 1</option><option value="2">Bloque 2</option></select></div>
@@ -2227,22 +2206,22 @@ HTML = r'''<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name
 <div class="stats"><article class="kpi"><div class="label">Ingresos totales</div><div class="value" id="k_revenue"></div><div class="sublabel" id="s_revenue"></div></article><article class="kpi"><div class="label">Facturas</div><div class="value" id="k_orders"></div><div class="sublabel" id="s_orders"></div></article><article class="kpi"><div class="label">Ticket promedio</div><div class="value" id="k_ticket"></div><div class="sublabel" id="s_ticket"></div></article><article class="kpi"><div class="label">Unidades vendidas</div><div class="value" id="k_units"></div><div class="sublabel" id="s_units"></div></article><article class="kpi"><div class="label">Clientes con compras</div><div class="value" id="k_customers"></div><div class="sublabel" id="s_customers"></div></article><article class="kpi"><div class="label">Existencias en catálogo</div><div class="value" id="k_stock"></div><div class="sublabel" id="s_stock"></div></article></div>
 <div class="notice"><b>Nota metodológica:</b> el archivo original reutiliza claves en dos bloques; las relaciones se construyeron con <code>(bloque, id)</code>. __CONCILIACION__ <b>__FALTAN__</b> productos sin nombre. Los filtros de fecha, zona y cargo afectan a las ventas; el inventario es una fotografía sin fechas.</div>
 <section id="ventas"><div class="section-head"><div><div class="micro">02 / Resultados comerciales</div><h2>Evolución de las ventas</h2></div><p>Series cronológicas · Variaciones estacionales · Concentración</p></div>
-<div class="grid"><article class="card s8"><h3>Ingresos mensuales</h3><p>Serie temporal consolidada de facturación; cambia con todos los filtros.</p><div class="chart tall" id="ch_months"></div></article>
-<article class="card s4"><h3>Ventas por año</h3><p>Comparación anual de ingresos acumulados.</p><div class="chart tall" id="ch_years"></div></article>
-<article class="card s6"><h3>Transacciones por mes</h3><p>Facturas únicas por período; una factura puede contener varias líneas.</p><div class="chart" id="ch_month_orders"></div></article>
-<article class="card s6"><h3>Ticket medio mensual</h3><p>Ingreso del período dividido por facturas únicas.</p><div class="chart" id="ch_ticket"></div></article>
-<article class="card s6"><h3>Ventas por día de la semana</h3><p>Distribución de ingresos de lunes a domingo.</p><div class="chart" id="ch_week"></div></article>
-<article class="card s6"><h3>Volumen por hora</h3><p>Cantidad de operaciones registradas durante el día.</p><div class="chart" id="ch_hour"></div></article></div></section>
+<div class="grid"><article class="card s8"><h3>Ingresos mensuales</h3><p>Serie temporal consolidada de facturación; cambia con todos los filtros.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_months">Esperando respuesta de Python…</div><img class="sb" id="img_ch_months" alt="Gráfico Seaborn ch_months" hidden></div></article>
+<article class="card s4"><h3>Ventas por año</h3><p>Comparación anual de ingresos acumulados.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_years">Esperando respuesta de Python…</div><img class="sb" id="img_ch_years" alt="Gráfico Seaborn ch_years" hidden></div></article>
+<article class="card s6"><h3>Transacciones por mes</h3><p>Facturas únicas por período; una factura puede contener varias líneas.</p><div class="chart sb-slot"><div class="sb-placeholder" id="pending_ch_month_orders">Esperando respuesta de Python…</div><img class="sb" id="img_ch_month_orders" alt="Gráfico Seaborn ch_month_orders" hidden></div></article>
+<article class="card s6"><h3>Ticket medio mensual</h3><p>Ingreso del período dividido por facturas únicas.</p><div class="chart sb-slot"><div class="sb-placeholder" id="pending_ch_ticket">Esperando respuesta de Python…</div><img class="sb" id="img_ch_ticket" alt="Gráfico Seaborn ch_ticket" hidden></div></article>
+<article class="card s6"><h3>Ventas por día de la semana</h3><p>Distribución de ingresos de lunes a domingo.</p><div class="chart sb-slot"><div class="sb-placeholder" id="pending_ch_week">Esperando respuesta de Python…</div><img class="sb" id="img_ch_week" alt="Gráfico Seaborn ch_week" hidden></div></article>
+<article class="card s6"><h3>Volumen por hora</h3><p>Cantidad de operaciones registradas durante el día.</p><div class="chart sb-slot"><div class="sb-placeholder" id="pending_ch_hour">Esperando respuesta de Python…</div><img class="sb" id="img_ch_hour" alt="Gráfico Seaborn ch_hour" hidden></div></article></div></section>
 <section id="productos"><div class="section-head"><div><div class="micro">03 / Surtido comercial</div><h2>Productos y mezcla de ventas</h2></div><p>Familias derivadas de la primera palabra del nombre de producto</p></div>
-<div class="grid"><article class="card s6"><h3>Familias con mayores ingresos</h3><p>Ranking de agrupaciones derivadas del catálogo original.</p><div class="chart tall" id="ch_family"></div></article><article class="card s6"><h3>Participación por familia</h3><p>Concentración porcentual de los ingresos.</p><div class="chart tall" id="ch_donut"></div></article>
-<article class="card s8"><h3>Productos con mayores ingresos</h3><p>Referencias ordenadas por ingresos generados.</p><div class="chart tall" id="ch_product"></div></article><article class="card s4"><h3>Unidades por familia</h3><p>Volumen físico; distinto del valor monetario.</p><div class="chart tall" id="ch_qty"></div></article></div></section>
+<div class="grid"><article class="card s6"><h3>Familias con mayores ingresos</h3><p>Ranking de agrupaciones derivadas del catálogo original.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_family">Esperando respuesta de Python…</div><img class="sb" id="img_ch_family" alt="Gráfico Seaborn ch_family" hidden></div></article><article class="card s6"><h3>Participación por familia</h3><p>Concentración porcentual de los ingresos.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_donut">Esperando respuesta de Python…</div><img class="sb" id="img_ch_donut" alt="Gráfico Seaborn ch_donut" hidden></div></article>
+<article class="card s8"><h3>Productos con mayores ingresos</h3><p>Referencias ordenadas por ingresos generados.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_product">Esperando respuesta de Python…</div><img class="sb" id="img_ch_product" alt="Gráfico Seaborn ch_product" hidden></div></article><article class="card s4"><h3>Unidades por familia</h3><p>Volumen físico; distinto del valor monetario.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_qty">Esperando respuesta de Python…</div><img class="sb" id="img_ch_qty" alt="Gráfico Seaborn ch_qty" hidden></div></article></div></section>
 <section id="clientes"><div class="section-head"><div><div class="micro">04 / Clientes, equipos y terceros</div><h2>¿Quién impulsa los resultados?</h2></div><p>Rendimiento por territorio, empleado, cargo y proveedor</p></div>
-<div class="grid"><article class="card s6"><h3>Ingresos por zona del cliente</h3><p>Zona extraída de la dirección registrada en Clientes.</p><div class="chart tall" id="ch_zone"></div></article><article class="card s6"><h3>Distribución de frecuencia de compra</h3><p>Facturas por cliente dentro de la selección activa.</p><div class="chart tall" id="ch_customers"></div></article>
-<article class="card s6"><h3>Top empleados por ingresos gestionados</h3><p>Asociación por la clave empleado–factura; no mide comisiones.</p><div class="chart tall" id="ch_employees"></div></article><article class="card s6"><h3>Ventas asociadas a cada cargo</h3><p>Facturación de los empleados agrupada por cargo.</p><div class="chart tall" id="ch_roles"></div></article>
-<article class="card s12"><h3>Proveedores de referencias vendidas</h3><p>Ingresos de productos según el proveedor vinculado en el catálogo; no representan ingresos del proveedor.</p><div class="chart tall" id="ch_providers"></div></article></div></section>
+<div class="grid"><article class="card s6"><h3>Ingresos por zona del cliente</h3><p>Zona extraída de la dirección registrada en Clientes.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_zone">Esperando respuesta de Python…</div><img class="sb" id="img_ch_zone" alt="Gráfico Seaborn ch_zone" hidden></div></article><article class="card s6"><h3>Distribución de frecuencia de compra</h3><p>Facturas por cliente dentro de la selección activa.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_customers">Esperando respuesta de Python…</div><img class="sb" id="img_ch_customers" alt="Gráfico Seaborn ch_customers" hidden></div></article>
+<article class="card s6"><h3>Top empleados por ingresos gestionados</h3><p>Asociación por la clave empleado–factura; no mide comisiones.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_employees">Esperando respuesta de Python…</div><img class="sb" id="img_ch_employees" alt="Gráfico Seaborn ch_employees" hidden></div></article><article class="card s6"><h3>Ventas asociadas a cada cargo</h3><p>Facturación de los empleados agrupada por cargo.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_roles">Esperando respuesta de Python…</div><img class="sb" id="img_ch_roles" alt="Gráfico Seaborn ch_roles" hidden></div></article>
+<article class="card s12"><h3>Proveedores de referencias vendidas</h3><p>Ingresos de productos según el proveedor vinculado en el catálogo; no representan ingresos del proveedor.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_providers">Esperando respuesta de Python…</div><img class="sb" id="img_ch_providers" alt="Gráfico Seaborn ch_providers" hidden></div></article></div></section>
 <section id="inventario"><div class="section-head"><div><div class="micro">05 / Operación de la tienda</div><h2>Inventario y alertas</h2></div><p>Saldo de existencias de la fuente, no reconstrucción histórica</p></div>
-<div class="grid"><article class="card s6"><h3>Stock total por familia</h3><p>Unidades disponibles registradas en el catálogo.</p><div class="chart tall" id="ch_stocks"></div></article><article class="card s6"><h3>Referencias por familia</h3><p>Diversidad de productos agrupada por familia.</p><div class="chart tall" id="ch_refs"></div></article>
-<article class="card s4"><h3>Estado del inventario</h3><p>Cantidad de referencias por rango de existencias.</p><div class="chart tall" id="ch_stockrange"></div></article>
+<div class="grid"><article class="card s6"><h3>Stock total por familia</h3><p>Unidades disponibles registradas en el catálogo.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_stocks">Esperando respuesta de Python…</div><img class="sb" id="img_ch_stocks" alt="Gráfico Seaborn ch_stocks" hidden></div></article><article class="card s6"><h3>Referencias por familia</h3><p>Diversidad de productos agrupada por familia.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_refs">Esperando respuesta de Python…</div><img class="sb" id="img_ch_refs" alt="Gráfico Seaborn ch_refs" hidden></div></article>
+<article class="card s4"><h3>Estado del inventario</h3><p>Cantidad de referencias por rango de existencias.</p><div class="chart tall sb-slot"><div class="sb-placeholder" id="pending_ch_stockrange">Esperando respuesta de Python…</div><img class="sb" id="img_ch_stockrange" alt="Gráfico Seaborn ch_stockrange" hidden></div></article>
 <article class="card s8"><h3>Listado de productos con bajo stock</h3><p id="stock_explainer"></p><div class="table-wrap"><table><thead><tr><th>Referencia</th><th>Familia</th><th>Bloque</th><th class="r">Stock</th><th class="r">Precio</th></tr></thead><tbody id="stockTable"></tbody></table></div></article>
 <article class="card s12"><div class="hrow"><div><h3>Ranking detallado de productos</h3><p>Los diez productos que concentran el mayor ingreso en la selección.</p></div><span class="badge">Tabla dinámica</span></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Producto</th><th class="r">Ingresos</th><th class="r">Unidades</th></tr></thead><tbody id="topTable"></tbody></table></div></article></div></section>
 <section id="seaborn"><div class="section-head"><div><div class="micro">06 / Procesamiento en Python</div><h2>Visualizaciones Seaborn</h2></div><p id="sb_info" role="status">Preparando gráficos con Seaborn…</p></div>
@@ -2252,11 +2231,11 @@ HTML = r'''<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name
 <article class="card s12"><div class="hrow"><div><h3>Distribución del importe por familia</h3><p>Mediana, cuartiles y valores atípicos de las líneas vendidas.</p></div><span class="badge">SEABORN</span></div><div class="sb-slot"><div class="sb-placeholder" id="pending_dispersion">Esperando respuesta de Python…</div><img class="sb" id="img_dispersion" alt="Diagrama de caja Seaborn del importe de ventas" hidden></div></article></div></section>
 <div class="method"><div class="micro">07 / Metodología verificable</div><p><strong>Procedencia:</strong> Mi_tienda.xlsx y sus seis tablas originales: Clientes, Empleados, Facturas, Pedidos, Productos y Proveedores (1.600 líneas de venta y 2.000 productos). El corte analítico publicado se derivó de las seis tablas originales; las 1.600 facturas se conciliaron sin diferencias frente a los pedidos. La columna "bloque" distingue reinicios de identificadores; todas las relaciones entre facturas, pedidos, clientes, empleados y productos usan claves compuestas.</p>
 <p><strong>Métricas:</strong> ingresos = SUM(cantidad × precio_unitario); ticket promedio = ingresos / COUNT(DISTINCT factura compuesta); clientes = COUNT(DISTINCT bloque + id_cliente); stock = suma de existencias del catálogo. <strong>No hay</strong> costo de compras, utilidades, método de pago ni TRM histórica en el Excel; no se crearon valores ficticios.</p>
-<p><strong>Funcionamiento:</strong> 18 gráficos Plotly se actualizan en el navegador. Los tres gráficos Seaborn se solicitan al servidor Python y se generan únicamente cuando este responde; se recalculan al cambiar los filtros. __ESTADODB__</p>
+<p><strong>Funcionamiento:</strong> Las 21 visualizaciones Seaborn se solicitan al servidor Python, se generan solo cuando este responde y se recalculan al cambiar los filtros. __ESTADODB__</p>
 <p><strong>Conversión de moneda:</strong> al activar USD se divide cada valor en COP por una TRM ingresada manualmente; es solo una equivalencia referencial, no un análisis histórico del dólar. El valor original en la base se conserva en COP.</p>
 <p><strong>Fecha de generación:</strong> __FECHAGEN__. <strong>Intervalo analizado:</strong> __INTERVALO__. <strong>Integridad:</strong> __ESTADOINTEGRIDAD__.</p></div>
 <div class="method source"><div><div class="micro">08 / Código fuente</div><h2>Entrega reproducible</h2><p>El archivo de código documenta la transformación de datos, las métricas, la generación del HTML y la opción de servidor Python. También permite reconstruir el análisis desde las seis tablas CSV originales.</p></div><a class="btn btn-primary" href="/Codigo_MiTienda.txt" download>Descargar código Python (.txt)</a></div>
-<footer class="foot"><span>MiTienda · Informe académico de analítica comercial</span><span>Fuente: Mi_tienda.xlsx · Python · Seaborn · Plotly</span></footer></main><script>__JS__</script></body></html>'''
+<footer class="foot"><span>MiTienda · Informe académico de analítica comercial</span><span>Fuente: Mi_tienda.xlsx · Python · Seaborn · PostgreSQL</span></footer></main><script>__JS__</script></body></html>'''
 
 
 def construir_html(ventas,inventario,personal,qa,origen,output,dinamico=False):
@@ -2264,8 +2243,8 @@ def construir_html(ventas,inventario,personal,qa,origen,output,dinamico=False):
         return json.dumps(data,ensure_ascii=False,separators=(',',':'),allow_nan=False).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
     js=JS.replace('__VENTAS__',safe_json(ventas)).replace('__INVENTARIO__',safe_json(inventario))\
           .replace('__PERSONAL__',safe_json(personal)).replace('__QA__',safe_json(qa))\
-          .replace('__DINAMICO__','true' if dinamico else 'false')
-    html=HTML.replace('__CSS__',CSS).replace('__PLOTLYJS__',get_plotlyjs().replace('</script','<\\/script'))
+          .replace('__DINAMICO__','true' if dinamico else 'false').replace('__CHART_KINDS__',json.dumps(__import__('charts').KINDS))
+    html=HTML.replace('__CSS__',CSS)
     html=html.replace('__JS__',js).replace('__ORIGEN__',origen)
     html=html.replace('__FALTAN__',str(qa.get('productos_sin_nombre',0))).replace('__INCONSISTENCIAS__',str(qa.get('facturas_inconsistentes',0)))
     html=html.replace('__FECHAGEN__',datetime.now().strftime('%Y-%m-%d %H:%M'))
@@ -2317,8 +2296,15 @@ def servidor(ventas,inventario,personal,qa,html,host,port):
                     and (not f.get('zone') or r['zona']==f['zone'])
                     and (not f.get('role') or r['puesto']==f['role'])
                     and (not f.get('q') or f['q'].lower() in r['producto'].lower() or f['q'].lower() in r['producto_id'].lower())]
+                from charts import KINDS, render as render_chart
+                block=int(f.get('block') or 0)
+                selected_inventory=[r for r in inventario if (not block or r['bloque']==block)
+                    and (not f.get('family') or r['familia']==f['family'])
+                    and (not f.get('q') or f['q'].lower() in r['producto'].lower() or f['q'].lower() in r['id'].lower())]
+                currency=f.get('currency','COP');trm=float(f.get('trm') or 4000)
+                if currency not in ('COP','USD') or not 1<=trm<=100000:raise ValueError('Conversión inválida')
                 with SEABORN_LOCK:
-                    response={k:imagen_seaborn(sub,k) for k in ('familias','calor','dispersion')}
+                    response={k:render_chart(k,sub,selected_inventory,currency,trm) for k in KINDS}
                 data=json.dumps(response).encode('utf-8')
                 self.send_response(200);self.send_header('Content-Type','application/json; charset=utf-8')
             except Exception as error:
@@ -2332,13 +2318,13 @@ def servidor(ventas,inventario,personal,qa,html,host,port):
 
 
 def main():
-    parser=argparse.ArgumentParser(description='Dashboard MiTienda real · CSV/SQL + Seaborn + Plotly')
+    parser=argparse.ArgumentParser(description='Dashboard MiTienda real · CSV/SQL + Seaborn')
     parser.add_argument('--carpeta',default=str(DATOS),help='Carpeta CSV de las 6 tablas originales')
     parser.add_argument('--salida',default=str(BASE/'Dashboard_MiTienda.html'))
     parser.add_argument('--fuente',choices=['incluido','csv','sql'],default='incluido')
     parser.add_argument('--db-url',default=os.environ.get('MITIENDA_DATABASE_URL',''),help='URL SQLAlchemy; evitar guardarla en repos públicos')
     parser.add_argument('--cargar-sql',action='store_true',help='Crea/refresca tablas dw_mitienda_* en la BD configurada')
-    parser.add_argument('--servidor',action='store_true',help='Inicia servidor HTTP Python; recalcula los tres gráficos Seaborn con cada filtro')
+    parser.add_argument('--servidor',action='store_true',help='Inicia servidor HTTP Python; recalcula los 21 gráficos Seaborn con cada filtro')
     parser.add_argument('--host',default='127.0.0.1');parser.add_argument('--puerto',type=int,default=8050)
     args=parser.parse_args()
     if args.fuente == 'sql':

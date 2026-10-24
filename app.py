@@ -13,10 +13,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from mitienda_dashboard import construir_html
 from warehouse import comprobar, leer_dashboard, ventas_filtradas
+from charts import KINDS, render as render_chart
 
 with (Path(__file__).parent / 'sales.json').open(encoding='utf-8') as source:
     VENTAS = json.load(source)
@@ -51,23 +52,24 @@ async def seaborn_charts(request: Request):
     try:
         body = await request.json()
         f = body['filters']
-        if not isinstance(f, dict) or set(f) - {'start','end','block','family','zone','role','q'}:
+        if not isinstance(f, dict) or set(f) - {'start','end','block','family','zone','role','q','currency','trm'}:
             raise ValueError('Filtros no válidos')
         for key, value in f.items():
-            if not isinstance(value, (int,str)) or len(str(value)) > 100:
+            if not isinstance(value, (int,float,str)) or len(str(value)) > 100:
                 raise ValueError('Filtro no válido')
         block = int(f.get('block') or 0)
         if block not in (0,1,2):
             raise ValueError('Bloque no válido')
     except (ValueError, TypeError, KeyError, json.JSONDecodeError):
         raise HTTPException(status_code=400, detail='Solicitud de filtros no válida')
-    if DB_URL:
-        try:
-            selected = ventas_filtradas(DB_URL, f)
-        except Exception:
-            raise HTTPException(status_code=503, detail='No se pudo consultar PostgreSQL')
-    else:
-        selected = [r for r in VENTAS
+    try:
+        if DB_URL: all_sales, all_inventory, _, _ = leer_dashboard(DB_URL)
+        else:
+            from mitienda_dashboard import leer_corte
+            all_sales, all_inventory, _, _ = leer_corte()
+    except Exception:
+        raise HTTPException(status_code=503, detail='No se pudo consultar PostgreSQL')
+    selected = [r for r in all_sales
         if (not f.get('start') or r['fecha'] >= f['start'])
         and (not f.get('end') or r['fecha'] <= f['end'])
         and (not block or r['bloque'] == block)
@@ -76,8 +78,16 @@ async def seaborn_charts(request: Request):
         and (not f.get('role') or r['puesto'] == f['role'])
         and (not f.get('q') or str(f['q']).lower() in r['producto'].lower()
              or str(f['q']).lower() in r['producto_id'].lower())]
+    inventory = [r for r in all_inventory if (not block or r['bloque']==block)
+                 and (not f.get('family') or r['familia']==f['family'])
+                 and (not f.get('q') or str(f['q']).lower() in r['producto'].lower()
+                      or str(f['q']).lower() in r['id'].lower())]
+    currency=f.get('currency','COP')
+    if currency not in ('COP','USD'): raise HTTPException(status_code=400,detail='Moneda no válida')
+    trm=float(f.get('trm') or 4000)
+    if not 1<=trm<=100000:raise HTTPException(status_code=400,detail='TRM no válida')
     with LOCK:
-        return {kind: imagen_seaborn(selected, kind) for kind in ('familias','calor','dispersion')}
+        return {kind: render_chart(kind,selected,inventory,currency,trm) for kind in KINDS}
 
 def imagen_seaborn(ventas,tipo):
     """Genera un SVG con Seaborn para los registros filtrados."""
@@ -142,7 +152,11 @@ def dashboard():
 
 @app.get('/Codigo_MiTienda.txt')
 def codigo_txt():
-    return FileResponse(Path(__file__).parent / 'mitienda_dashboard.py', media_type='text/plain; charset=utf-8')
+    modules=('mitienda_dashboard.py','charts.py','warehouse.py','app.py')
+    content='\n\n'.join('# ' + '='*68 + '\n# Archivo: ' + name + '\n# ' + '='*68 + '\n' +
+                      (Path(__file__).parent/name).read_text(encoding='utf-8') for name in modules)
+    return Response(content,media_type='text/plain; charset=utf-8',
+                    headers={'Content-Disposition':'attachment; filename="Codigo_MiTienda.txt"'})
 
 @app.get('/mitienda_dashboard.py')
 def codigo_py():
