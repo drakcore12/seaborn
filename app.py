@@ -36,7 +36,9 @@ def health():
     if DB_URL:
         try:
             stats = comprobar(DB_URL)
-            if stats['rows'] != 1600 or stats['revenue_cop'] != 203465700:
+            if (stats['rows'] != 1600 or stats['revenue_cop'] != 203465700
+                    or stats['products'] != 2000 or stats['employees'] != 100
+                    or stats['orphan_sales'] != 0):
                 raise ValueError('Integridad de MiTienda no verificada')
         except Exception:
             raise HTTPException(status_code=503, detail='Base de datos no disponible')

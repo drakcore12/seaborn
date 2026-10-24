@@ -12,6 +12,9 @@ KINDS = ('ch_months','ch_years','ch_month_orders','ch_ticket','ch_week','ch_hour
          'ch_employees','ch_roles','ch_providers','ch_stocks','ch_refs','ch_stockrange',
          'familias','calor','dispersion')
 DAYS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
+PALETTE = ['#25548a','#2a8394','#d19648','#744f91','#c86a62',
+           '#5d9575','#526ab2','#a97751','#7b9b47','#9d608d']
+ACCENT = {'ch_months':'#25548a','ch_ticket':'#c58a3d'}
 
 def _sum(rows, key, value='venta'):
     out=defaultdict(float)
@@ -27,9 +30,12 @@ def _bar(ax, data, horizontal=False, limit=10, percent=False):
         total=sum(data.values()) or 1
         values=[100*x/total for x in values]
     if horizontal:
-        sns.barplot(x=values[::-1],y=labels[::-1],ax=ax,color='#4776a8',errorbar=None)
+        ordered=labels[::-1]
+        sns.barplot(x=values[::-1],y=ordered,hue=ordered,ax=ax,
+                    palette=PALETTE[:len(ordered)][::-1],legend=False,errorbar=None)
     else:
-        sns.barplot(x=labels,y=values,ax=ax,color='#4776a8',errorbar=None)
+        sns.barplot(x=labels,y=values,hue=labels,ax=ax,
+                    palette=PALETTE[:len(labels)],legend=False,errorbar=None)
         ax.tick_params(axis='x',rotation=28)
     ax.set(xlabel='Participación (%)' if percent else '',ylabel='')
 
@@ -50,24 +56,24 @@ def render(kind, sales, inventory, currency='COP', trm=4000):
     elif kind in ('ch_months','ch_years','ch_week','ch_hour','ch_month_orders','ch_ticket'):
         if kind=='ch_months':
             d=_sum(sales,'mes');labels=sorted(d);values=[d[x]/scale for x in labels]
-            sns.lineplot(x=labels,y=values,marker='o',color='#3478c0',linewidth=2.5,ax=ax)
+            sns.lineplot(x=labels,y=values,marker='o',color=ACCENT[kind],linewidth=2.5,ax=ax)
         elif kind=='ch_years':
             _bar(ax,{k:v/scale for k,v in _sum(sales,'anio').items()})
         elif kind=='ch_month_orders':
             d=defaultdict(set)
             for r in sales:d[r['mes']].add(r['factura'])
-            labels=sorted(d);sns.barplot(x=labels,y=[len(d[x]) for x in labels],color='#4776a8',ax=ax)
+            labels=sorted(d);sns.barplot(x=labels,y=[len(d[x]) for x in labels],hue=labels,palette='crest',legend=False,ax=ax)
         elif kind=='ch_ticket':
             d=defaultdict(lambda:defaultdict(float))
             for r in sales:d[r['mes']][r['factura']]+=float(r['venta'])
-            labels=sorted(d);sns.lineplot(x=labels,y=[sum(d[x].values())/len(d[x])/scale for x in labels],marker='o',color='#b48a51',ax=ax)
+            labels=sorted(d);sns.lineplot(x=labels,y=[sum(d[x].values())/len(d[x])/scale for x in labels],marker='o',color=ACCENT[kind],ax=ax)
         elif kind=='ch_week':
             d=defaultdict(float)
             for r in sales:d[int(r['dia_semana'])]+=float(r['venta'])/scale
-            sns.barplot(x=DAYS,y=[d[x] for x in range(7)],color='#4776a8',ax=ax)
+            sns.barplot(x=DAYS,y=[d[x] for x in range(7)],hue=DAYS,palette=PALETTE[:7],legend=False,ax=ax)
         else:
             d=Counter(int(r['hora']) for r in sales)
-            sns.barplot(x=list(range(24)),y=[d[x] for x in range(24)],color='#4776a8',ax=ax)
+            hours=list(range(24));sns.barplot(x=hours,y=[d[x] for x in hours],hue=hours,palette='mako',legend=False,ax=ax)
             ax.tick_params(axis='x',rotation=60)
         if kind in ('ch_months','ch_ticket','ch_month_orders'):ax.tick_params(axis='x',rotation=45)
         ax.set(xlabel='',ylabel=('Importe (USD)' if currency=='USD' else 'Importe (COP)') if kind in ('ch_months','ch_years','ch_ticket','ch_week') else 'Facturas / líneas')
@@ -80,18 +86,19 @@ def render(kind, sales, inventory, currency='COP', trm=4000):
         else:
             labels=['0','1–10','11–20','21–50','>50'];n=Counter(0 if r['stock']==0 else 1 if r['stock']<=10 else 2 if r['stock']<=20 else 3 if r['stock']<=50 else 4 for r in inventory)
             values=[n[x] for x in range(5)]
-        sns.barplot(x=labels,y=values,color='#4776a8',ax=ax);ax.set(xlabel='Facturas por cliente' if kind=='ch_customers' else 'Unidades en stock',ylabel='Clientes' if kind=='ch_customers' else 'Referencias')
+        sns.barplot(x=labels,y=values,hue=labels,palette=PALETTE[:5],legend=False,ax=ax);ax.set(xlabel='Facturas por cliente' if kind=='ch_customers' else 'Unidades en stock',ylabel='Clientes' if kind=='ch_customers' else 'Referencias')
     elif kind=='calor':
         import numpy as np
         matrix=np.zeros((7,24),dtype=int)
         for r in sales:matrix[int(r['dia_semana']),int(r['hora'])]+=1
-        sns.heatmap(matrix,cmap='Blues',ax=ax,yticklabels=DAYS,xticklabels=[str(x) for x in range(24)])
+        sns.heatmap(matrix,cmap='mako',ax=ax,yticklabels=DAYS,xticklabels=[str(x) for x in range(24)])
         ax.set(xlabel='Hora',ylabel='Día')
     elif kind=='dispersion':
         families=Counter(r['familia'] for r in sales)
         top=[x for x,_ in families.most_common(6)]
         subset=[r for r in sales if r['familia'] in top]
-        sns.boxplot(x=[r['familia'] for r in subset],y=[float(r['venta'])/scale for r in subset],order=top,color='#76a0c9',ax=ax)
+        sns.boxplot(x=[r['familia'] for r in subset],y=[float(r['venta'])/scale for r in subset],
+                    hue=[r['familia'] for r in subset],order=top,palette=PALETTE[:len(top)],legend=False,ax=ax)
         ax.tick_params(axis='x',rotation=30);ax.set(xlabel='',ylabel='Valor de línea ('+currency+')')
     else:
         field={'ch_family':'familia','ch_donut':'familia','ch_product':'producto','ch_qty':'familia',

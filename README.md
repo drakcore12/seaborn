@@ -1,6 +1,6 @@
 # MiTienda · dashboard HTML y Python
 
-21 gráficos Seaborn recalculados en Python con filtros. `render.yaml` configura el servicio FastAPI y genera `index.html` durante el build. Las figuras solo se solicitan y cargan cuando responde el servidor; el HTML abierto como archivo no las incluye. El código se puede descargar como `.txt` desde el dashboard. El corte de 1.600 facturas se comparó con los seis CSV de `Mi_tienda.xlsx` y no hubo diferencias; los CSV originales y los contactos de clientes no se publican en este repositorio.
+21 gráficos Seaborn recalculados en Python con filtros. `render.yaml` configura el servicio FastAPI y genera `index.html` durante el build. Las figuras solo se solicitan y cargan cuando responde el servidor; el HTML abierto como archivo no las incluye. El panel de conexión consulta `/health`, que comprueba en PostgreSQL las ventas, los productos, el personal, el importe y las referencias del inventario. El código completo se puede descargar como `.txt` desde el dashboard. El corte de 1.600 facturas se comparó con los seis CSV de `Mi_tienda.xlsx` y no hubo diferencias; los CSV originales y los contactos de clientes no se publican en este repositorio.
 
 ## Despliegue en Render
 
